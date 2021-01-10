@@ -10,7 +10,8 @@ RUN python -m unittest discover -v sunspec
 RUN python setup.py install
 
 WORKDIR /sunspec_exporter
-ADD sunspec_exporter/. /sunspec_exporter
+ADD sunspec_exporter /sunspec_exporter
 
 EXPOSE 9012
 
+ENTRYPOINT [ "python3", "/sunspec_exporter/sunspec_exporter.py" ]
