@@ -14,7 +14,7 @@ Options:
   --sunspec_model_ids MODEL_IDS      Comma separated list of the ids of the module you want the data from
   --sunspec_port SUNSPEC_PORT        Modbus port [default: 502]
   --sunspec_address SUNSPEC_ADDRESS  Target modbus device address [default: 1]
-  
+
 """
 from docopt import docopt
 from prometheus_client import start_http_server, Summary
@@ -26,9 +26,8 @@ import re
 
 
 # Create a metric to track time spent and requests made.
-REQUEST_TIME = Summary('sunspec_collection_seconds',
+REQUEST_TIME = Summary('sunspec_fn_collect_data',
                        'Time spent collecting the data')
-
 
 # Decorate function with metric.
 @REQUEST_TIME.time()
@@ -61,7 +60,7 @@ def collect_data(sunspec_client, model_ids):
                     for point in block.points_list:
                         if point.value is not None:
                             if point.point_type.label:
-                                point_label = re.sub('[ :\(\)\{\}]', '_', point.point_type.label)
+                                point_label = re.sub('[^a-zA-Z0-9_]', '_', point.point_type.label)
                                 metric_label = f"{index}{point_label}_{point.point_type.id}"
                             else:
                                 metric_label = f"{index}{point.point_type.id}"
@@ -102,18 +101,52 @@ class SunspecCollector(object):
         # yield GaugeMetricFamily('my_gauge', 'Help text', value=7)
         results = collect_data(self.sunspec_client, self.model_ids)
         for x in results:  # call sunspec here
-            m = None
-            if results[x]["metric_type"] == "Counter":
-                m = CounterMetricFamily(f"sunspec_{x}", "", labels=[
-                                        "ip", "port", "target"])
-            if results[x]["metric_type"] == "Gauge":
-                m = GaugeMetricFamily(f"sunspec_{x}", "", labels=[
-                                        "ip", "port", "target"])
+            the_value = results[x]["value"]
+            if is_numeric(the_value):
+                m = None
+                if results[x]["metric_type"] == "Counter":
+                    m = CounterMetricFamily(f"sunspec_{x}", "", labels=[
+                                            "ip", "port", "target"])
+                if results[x]["metric_type"] == "Gauge":
+                    m = GaugeMetricFamily(f"sunspec_{x}", "", labels=[
+                                            "ip", "port", "target"])
             
-            m.add_metric([self.ip, str(self.port),str(self.target)], results[x]["value"])
-            yield m
+                m.add_metric([self.ip, str(self.port),str(self.target)], the_value)
+                yield m
+            else:
+                print(f"# metric from {self.ip}:{self.port}/{self.target} sunspec_{x} Value: {the_value} is a {type(the_value)}, Ignoring")
+
+
+# https://stackoverflow.com/a/52676692/2150411
+import ast
+import numbers
+def is_numeric(obj):
+    try:
+        if isinstance(obj, numbers.Number):
+            return True
+        elif isinstance(obj, str):
+            nodes = list(ast.walk(ast.parse(obj)))[1:]
+            if not isinstance(nodes[0], ast.Expr):
+                return False
+            if not isinstance(nodes[-1], ast.Num):
+                return False
+            nodes = nodes[1:-1]
+            for i in range(len(nodes)):
+                #if used + or - in digit :
+                if i % 2 == 0:
+                    if not isinstance(nodes[i], ast.UnaryOp):
+                        return False
+                else:
+                    if not isinstance(nodes[i], (ast.USub, ast.UAdd)):
+                        return False
+            return True
+        else:
+            return False
+    except:
+        return False
 
 def model_name(model):
+    "Model Data Name"
     if model.model_type.label:
         label = '%s (%s)' % (model.model_type.label, str(model.id))
     else:
@@ -127,9 +160,9 @@ if __name__ == '__main__':
     print(arguments)
 
     sunspec_model_ids = arguments["--sunspec_model_ids"].split(",")
-    sunspec_ip =      arguments["--sunspec_ip"]
-    sunspec_port =    int(arguments["--sunspec_port"])
-    sunspec_address = arguments["--sunspec_address"]
+    sunspec_ip =        arguments["--sunspec_ip"]
+    sunspec_port =      int(arguments["--sunspec_port"])
+    sunspec_address =   arguments["--sunspec_address"]
 
 
     try:
@@ -142,7 +175,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     # remove the models that don't match what we want
-    # this will make reads faster (ignore unnesscessary models)
+    # this will make reads faster (ignore unnecessary model data sets)
 
     print("# !!! Enumerating all models, removing from future reads unwanted ones")
     models = sunspec_client.device.models_list.copy()

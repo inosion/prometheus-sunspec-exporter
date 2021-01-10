@@ -6,6 +6,9 @@
 - Need to run one exporter "per" modbus sunspec address/ip/port (current limitation)
 - Uses https://github.com/sunspec/pysunspec
 
+# Tested on
+- SMA SunnyBoy TriPower STL-6000 - Use address 126 (for SunSpec)
+- Fronius (Something) - SunSpec native
 # Sample Grafana
 
 ![images/grafana_dash_sample_2021-01-10_13-28.png](images/grafana_dash_sample_2021-01-10_13-28.png)
@@ -122,31 +125,34 @@ Call it and see what you get:
 
 result example
 ```
-sunspec_Phase_Voltage_AN_PhVphA_V{ip="100.64.8.30",port="502",target="126"} 237.20000000000002
+sunspec_Phase_Voltage_AN_PhVphA_V{ip="192.168.1.70",port="502",target="126"} 237.20000000000002
 # HELP sunspec_Phase_Voltage_BN_PhVphB_V 
 # TYPE sunspec_Phase_Voltage_BN_PhVphB_V gauge
-sunspec_Phase_Voltage_BN_PhVphB_V{ip="100.64.8.30",port="502",target="126"} 234.3
+sunspec_Phase_Voltage_BN_PhVphB_V{ip="192.168.1.70",port="502",target="126"} 234.3
 # HELP sunspec_Phase_Voltage_CN_PhVphC_V 
 # TYPE sunspec_Phase_Voltage_CN_PhVphC_V gauge
-sunspec_Phase_Voltage_CN_PhVphC_V{ip="100.64.8.30",port="502",target="126"} 240.3
+sunspec_Phase_Voltage_CN_PhVphC_V{ip="192.168.1.70",port="502",target="126"} 240.3
 # HELP sunspec_Watts_W_W 
 # TYPE sunspec_Watts_W_W gauge
-sunspec_Watts_W_W{ip="100.64.8.30",port="502",target="126"} 4040.0
+sunspec_Watts_W_W{ip="192.168.1.70",port="502",target="126"} 4040.0
 # HELP sunspec_Hz_Hz_Hz 
 # TYPE sunspec_Hz_Hz_Hz gauge
-sunspec_Hz_Hz_Hz{ip="100.64.8.30",port="502",target="126"} 50.0
+sunspec_Hz_Hz_Hz{ip="192.168.1.70",port="502",target="126"} 50.0
 # HELP sunspec_VA_VA_VA 
 # TYPE sunspec_VA_VA_VA gauge
-sunspec_VA_VA_VA{ip="100.64.8.30",port="502",target="126"} 4040.0
+sunspec_VA_VA_VA{ip="192.168.1.70",port="502",target="126"} 4040.0
 # HELP sunspec_VAr_VAr_var 
 # TYPE sunspec_VAr_VAr_var gauge
-sunspec_VAr_VAr_var{ip="100.64.8.30",port="502",target="126"} 0.0
+sunspec_VAr_VAr_var{ip="192.168.1.70",port="502",target="126"} 0.0
 # HELP sunspec_WattHours_WH_Wh 
 # TYPE sunspec_WattHours_WH_Wh gauge
-sunspec_WattHours_WH_Wh{ip="100.64.8.30",port="502",target="126"} 1.472271e+07
+sunspec_WattHours_WH_Wh{ip="192.168.1.70",port="502",target="126"} 1.472271e+07
 # HELP sunspec_Cabinet_Temperature_TmpCab_C 
 # TYPE sunspec_Cabinet_Temperature_TmpCab_C gauge
-sunspec_Cabinet_Temperature_TmpCab_C{ip="100.64.8.30",port="502",target="126"} 53.0
+sunspec_Cabinet_Temperature_TmpCab_C{ip="192.168.1.70",port="502",target="126"} 53.0
 # HELP sunspec_Operating_State_St_total 
 ```
 
+# Testing with SunSpec
+
+See [testing/](testing/)

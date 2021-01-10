@@ -6,6 +6,6 @@ Run the following
 
 ```
 docker build -t inosion/sunspec-test .
-docker run --rm -ti -v `pwd`:/v --workdir /v inosion/sunspec-test python3 /src/pysunspec/scripts/suns.py -i 192.168.1.201
-
+# Test an IP, with target modbus address of 126
+docker run --rm -ti  inosion/sunspec-test python3 /src/pysunspec/scripts/suns.py -i 192.168.1.40 -a 126
 ```
