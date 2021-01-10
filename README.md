@@ -4,6 +4,11 @@
 - May have some re-coding to do around what consitutes a gauge, counter etc
 - is optimised to read only the "sunspec" model you desire (reduce call load on the device)
 - Need to run one exporter "per" modbus sunspec address/ip/port (current limitation)
+- Uses https://github.com/sunspec/pysunspec
+
+# Sample Grafana
+
+![images/grafana_dash_sample_2021-01-10_13-28.png](images/grafana_dash_sample_2021-01-10_13-28.png)
 
 # Bulding 
 
@@ -89,6 +94,21 @@ Timestamp: 2021-01-10T01:43:57Z
 # 02_DC_Voltage_DCV_V: 0
 # 02_DC_Power_DCW_W: 0.0
 ```
+
+# Installing at Your place
+
+1. Build it `docker build -t inosion/sunspec-exporter .`
+2. Save it `docker save | gzip > inosion_sunspec_exporter.tgz`
+3. Copy it to your running place
+    `sudo docker load < ~/inosion_sunspec_exporter.tgz`
+4. Use the sample `systemd` unit file  [install/prometheus-sunspec-exporter.service](install/prometheus-sunspec-exporter.service)
+     ```
+     sudo cp install/prometheus-sunspec-exporter.service /lib/systemd/system/
+     sudo systemctl enable prometheus-sunspec-exporter.service 
+     sudo systemctl start prometheus-sunspec-exporter.service 
+     ```
+5. Configure your Prometheus to collect the data [install/prometheus.yml](install/prometheus.yml)
+   
 
 # Testing 
 
