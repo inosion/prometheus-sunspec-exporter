@@ -1,6 +1,6 @@
 # Prometheus Sunspec Exporter
 
-- Alpha - but it works
+- ~Alpha~ Beta - Works and is Pulling data :-D
 - May have some re-coding to do around what consitutes a gauge, counter etc
 - is optimised to read only the "sunspec" model you desire (reduce call load on the device)
 - Need to run one exporter "per" modbus sunspec address/ip/port (current limitation)
@@ -17,23 +17,25 @@
 
 `docker build -t inosion/sunspec-exporter .`
 
-
 # Running the Exporter
 
 ```
 sunspec-prometheus-exporter
-
 Usage:
   sunspec_exporter.py start [ --port PORT ] [ --sunspec_address SUNSPEC_ADDRESS ] --sunspec_ip SUNSPEC_IP --sunspec_port SUNSPEC_PORT --sunspec_model_ids MODEL_IDS 
+  sunspec_exporter.py query [ --sunspec_address SUNSPEC_ADDRESS ] --sunspec_ip SUNSPEC_IP --sunspec_port SUNSPEC_PORT 
 
 Options:
   -h --help                          Show this screen.
   --version                          Show version.
+  query                              Dump out current data for analysis; and exit
+  start                              Run the prometheus node_exporter
   --port PORT                        Prometheus Client listen port [default: 9012]
   --sunspec_ip SUNSPEC_IP            IP Address of the SunSpec device (Modbus TCP)
   --sunspec_model_ids MODEL_IDS      Comma separated list of the ids of the module you want the data from
   --sunspec_port SUNSPEC_PORT        Modbus port [default: 502]
   --sunspec_address SUNSPEC_ADDRESS  Target modbus device address [default: 1]
+
 ```
 
 When it runs for the first time it will call the device, and poll all the data in the model. 
@@ -97,6 +99,19 @@ Timestamp: 2021-01-10T01:43:57Z
 # 02_DC_Voltage_DCV_V: 0
 # 02_DC_Power_DCW_W: 0.0
 ```
+# Finding out What data you want
+
+SunSpec devices conform to some data standards,
+Run the following 
+
+```
+docker run --rm -ti inosion/sunspec-exporter query --sunspec_address 126 --sunspec_ip IP_OF_INVERTER --sunspec_port 502
+```
+
+to find out what your data set, available, is.
+You will get a MASSIVe dump, skip past the XML to the nice text, and look at the values printed, work out which "model_id" you are after, 
+which section, and then that becomes your set of model_id's.
+
 
 # Installing at Your place
 
