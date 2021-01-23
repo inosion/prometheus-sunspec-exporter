@@ -12,9 +12,9 @@ ExecStartPre=-/usr/bin/docker rm prometheus-sunspec-exporter
 ExecStart=/usr/bin/docker run \
   --name=prometheus-sunspec-exporter \
   --rm \
-  -p 9012:9012 \
+  -p 9807:9807 \
   inosion/sunspec-exporter:latest \
-  start --port 9012 --sunspec_ip IP_ADDRESS_OF_SUNSPEC_DEVICE --sunspec_port 502 \
+  start --port 9807 --sunspec_ip IP_ADDRESS_OF_SUNSPEC_DEVICE --sunspec_port 502 \
   --sunspec_address 126 --sunspec_model_ids 103,160
   
 ExecStop=-/usr/bin/docker stop prometheus-sunspec-exporter

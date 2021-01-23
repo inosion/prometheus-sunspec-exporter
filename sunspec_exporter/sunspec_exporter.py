@@ -12,7 +12,7 @@ Options:
   --version                          Show version.
   query                              Dump out current data for analysis; and exit
   start                              Run the prometheus node_exporter
-  --port PORT                        Prometheus Client listen port [default: 9012]
+  --port PORT                        Prometheus Client listen port [default: 9807]
   --sunspec_ip SUNSPEC_IP            IP Address of the SunSpec device (Modbus TCP)
   --sunspec_model_ids MODEL_IDS      Comma separated list of the ids of the module you want the data from
   --sunspec_port SUNSPEC_PORT        Modbus port [default: 502]

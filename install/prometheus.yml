@@ -8,4 +8,4 @@ scrape_configs:
 
   - job_name: sma_inverter
     static_configs:
-      - targets: ['IP_ADDRESS_OF_SUNSPEC_EXPORTER:9012']
+      - targets: ['IP_ADDRESS_OF_SUNSPEC_EXPORTER:9807']

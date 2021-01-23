@@ -30,7 +30,7 @@ Options:
   --version                          Show version.
   query                              Dump out current data for analysis; and exit
   start                              Run the prometheus node_exporter
-  --port PORT                        Prometheus Client listen port [default: 9012]
+  --port PORT                        Prometheus Client listen port [default: 9807]
   --sunspec_ip SUNSPEC_IP            IP Address of the SunSpec device (Modbus TCP)
   --sunspec_model_ids MODEL_IDS      Comma separated list of the ids of the module you want the data from
   --sunspec_port SUNSPEC_PORT        Modbus port [default: 502]
@@ -43,8 +43,8 @@ The model_ids filter then removes sets of data, (config, name, serial etc)
 
 ```
 ✔ ~/projects/github.com/inosion/prometheus-sunspec-exporter [main|✚ 2…1] 
-12:43 $ docker run -ti --rm -p 9012:9012 inosion/sunspec-exporter start --port 9012 --sunspec_ip IPADDRESS --sunspec_port 502 --sunspec_address 126 --sunspec_model_ids 103,160
-{'--port': '9012',
+12:43 $ docker run -ti --rm -p 9807:9807 inosion/sunspec-exporter start --port 9807 --sunspec_ip IPADDRESS --sunspec_port 502 --sunspec_address 126 --sunspec_model_ids 103,160
+{'--port': '9807',
  '--sunspec_address': '126',
  '--sunspec_ip': 'IPADDRESS',
  '--sunspec_model_ids': '103,160',
@@ -131,12 +131,12 @@ which section, and then that becomes your set of model_id's.
 # Testing 
 
 ```
-docker run -ti --rm -v `pwd`/sunspec_exporter:/sunspec_exporter -p 9012:9012 inosion/sunspec-exporter python3 /sunspec_exporter/sunspec_exporter.py start --port 9012 --sunspec_ip <SMA_SUNNYBOY_INVERTER_IP> --sunspec_port 502 --sunspec_address 126 --sunspec_model_ids 103,160
+docker run -ti --rm -v `pwd`/sunspec_exporter:/sunspec_exporter -p 9807:9807 inosion/sunspec-exporter python3 /sunspec_exporter/sunspec_exporter.py start --port 9807 --sunspec_ip <SMA_SUNNYBOY_INVERTER_IP> --sunspec_port 502 --sunspec_address 126 --sunspec_model_ids 103,160
 ```
 
 Call it and see what you get:
 
-`curl http://localhost:9012/metrics`
+`curl http://localhost:9807/metrics`
 
 result example
 ```
