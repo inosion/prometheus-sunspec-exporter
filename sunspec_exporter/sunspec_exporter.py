@@ -4,7 +4,7 @@
 """sunspec-prometheus-exporter
 
 Usage:
-  sunspec_exporter.py start [ --port PORT ] [ --sunspec_address SUNSPEC_ADDRESS ] --sunspec_ip SUNSPEC_IP --sunspec_port SUNSPEC_PORT --sunspec_model_ids MODEL_IDS 
+  sunspec_exporter.py start [ --port PORT ] [ --sunspec_address SUNSPEC_ADDRESS ] --sunspec_ip SUNSPEC_IP --sunspec_port SUNSPEC_PORT --sunspec_model_ids MODEL_IDS --filter METRIC_FILTER
   sunspec_exporter.py query [ --sunspec_address SUNSPEC_ADDRESS ] --sunspec_ip SUNSPEC_IP --sunspec_port SUNSPEC_PORT 
 
 Options:
@@ -17,8 +17,28 @@ Options:
   --sunspec_model_ids MODEL_IDS      Comma separated list of the ids of the module you want the data from
   --sunspec_port SUNSPEC_PORT        Modbus port [default: 502]
   --sunspec_address SUNSPEC_ADDRESS  Target modbus device address [default: 1]
+  --filter METRICFILTER              Filter the value and alter the reponse. 
+
+Filtering:
+  Some devices require filtering of the register values received, due to bugs or features in the hardware.
+  This filter support, allows rewriting the exported value, with some basic functions.
+
+  For example, some SMA inverter models return 3276.8 for NaN, for DC Amps, at night time.
+  The correct value is 0 when it is not converting energy.
+
+  See https://github.com/inosion/prometheus-sunspec-exporter/blob/main/images/filtering_example_amps_bad.png for an example.
+
+  METRICFILTER is a space separated 3-Tuple, <metric_regex> <function>:<args> <replace_value> 
+  
+    --filter "Amps_Phase[A-Z]_Aph[A-Z] gt:3276 0"
+
+  Which reads, when the metric matching regex, Amps_Phase[A-Z]_Aph[A-Z] is greater than 3276, set the metric as 0.
+  In this example case, the inverter jumps from low 0.4, 0.5 Amps, up to 3276.7 (signed int16 Upper) represented as NaN. 
+
+  The sudden jump, results in out of whack telemetry.
 
 """
+
 from docopt import docopt
 from prometheus_client import start_http_server, Summary
 from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily, REGISTRY
