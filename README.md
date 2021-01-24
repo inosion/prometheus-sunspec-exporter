@@ -1,14 +1,26 @@
 # Prometheus Sunspec Exporter
 
-- ~Alpha~ Beta - Works and is Pulling data :-D
+- Works and is Pulling data :-D
 - May have some re-coding to do around what consitutes a gauge, counter etc
 - is optimised to read only the "sunspec" model you desire (reduce call load on the device)
 - Need to run one exporter "per" modbus sunspec address/ip/port (current limitation)
 - Uses https://github.com/sunspec/pysunspec
 
-# Tested on
-- SMA SunnyBoy TriPower STL-6000 - Use address 126 (for SunSpec)
-- Fronius (Something) - SunSpec native
+# Sunspec Devices 
+  Sunspec is alliance of 100 Solar and Electricity Storage products, that provides a standard Modbu API.
+
+  With this API, a prometheus exporter was born, in approximately 8 hours.
+
+  Devices supported can be found here (Sunspec Modbus Certified List)[https://sunspec.org/sunspec-modbus-certified-products/]
+  Manufacturers supporting Sunspec:
+  - Fronius
+  - SMA
+  - Huawei
+  - ABB
+  - Sungrow
+
+  See (tested-devices)[docs/tested-devices.md] for more information.
+
 # Sample Grafana
 
 ![images/grafana_dash_sample_2021-01-10_13-28.png](images/grafana_dash_sample_2021-01-10_13-28.png)
@@ -126,7 +138,6 @@ which section, and then that becomes your set of model_id's.
      sudo systemctl start prometheus-sunspec-exporter.service 
      ```
 5. Configure your Prometheus to collect the data [install/prometheus.yml](install/prometheus.yml)
-   
 
 # Testing 
 
@@ -167,6 +178,30 @@ sunspec_WattHours_WH_Wh{ip="192.168.1.70",port="502",target="126"} 1.472271e+07
 sunspec_Cabinet_Temperature_TmpCab_C{ip="192.168.1.70",port="502",target="126"} 53.0
 # HELP sunspec_Operating_State_St_total 
 ```
+
+# Filtering
+
+Some devices needs some tweaking, on the values they return.
+Some SMA Solar inverters return 3276.8 for NaN. 
+At night time, the DC Amps returns that value. Which is non too helpful in Grafana
+
+![amps_bad](images/filtering_example_amps_bad.png)
+
+To correct this, we can remap each returned value, before prometheus collects it. 
+
+```
+# Example of METRICFILTER
+--filter "Amps_Phase[ABC]_Aph[ABC]_A gt:3276 0.0"
+```
+METRICFILTER is a space separated 3-Tuple, <metric_regex> <function>:<args> <replace_value> 
+
+"Amps_Phase[ABC]_Aph[ABC]_A gt:3276 0.0"
+
+Which reads, when the metric matching regex, Amps_Phase[ABC]_Aph[ABC]_A is greater than 3276, set the metric as 0.
+In this example case, the inverter jumps from low 0.4, 0.5 Amps, up to 3276.7 (signed int16 Upper) represented as NaN. 
+
+This filter config removes that problem.
+
 
 # Testing with SunSpec
 

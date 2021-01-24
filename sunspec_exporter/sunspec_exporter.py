@@ -4,7 +4,7 @@
 """sunspec-prometheus-exporter
 
 Usage:
-  sunspec_exporter.py start [ --port PORT ] [ --sunspec_address SUNSPEC_ADDRESS ] --sunspec_ip SUNSPEC_IP --sunspec_port SUNSPEC_PORT --sunspec_model_ids MODEL_IDS --filter METRIC_FILTER
+  sunspec_exporter.py start [ --port PORT ] [ --sunspec_address SUNSPEC_ADDRESS ] [ --filter METRIC_FILTER... ] --sunspec_ip SUNSPEC_IP --sunspec_port SUNSPEC_PORT --sunspec_model_ids MODEL_IDS
   sunspec_exporter.py query [ --sunspec_address SUNSPEC_ADDRESS ] --sunspec_ip SUNSPEC_IP --sunspec_port SUNSPEC_PORT 
 
 Options:
@@ -30,7 +30,7 @@ Filtering:
 
   METRICFILTER is a space separated 3-Tuple, <metric_regex> <function>:<args> <replace_value> 
   
-    --filter "Amps_Phase[A-Z]_Aph[A-Z] gt:3276 0"
+  "Amps_Phase[A-Z]_Aph[A-Z] gt:3276 0"
 
   Which reads, when the metric matching regex, Amps_Phase[A-Z]_Aph[A-Z] is greater than 3276, set the metric as 0.
   In this example case, the inverter jumps from low 0.4, 0.5 Amps, up to 3276.7 (signed int16 Upper) represented as NaN. 
@@ -53,7 +53,45 @@ import sunspec.core.util as util
 from xml.dom import minidom
 import time
 import re
+import collections
 
+Filter = collections.namedtuple('Filter', ['regex', 'fn'])
+class FnMapping:
+
+    def filter_fn(fn, *args):
+        def filter(v):
+            return fn(*args, v)
+        return filter
+
+    def gt(replacement, upper_bound, val):
+        if val > upper_bound:
+            return replacement
+        else:
+            return val
+
+    def lt(replacement, lower_bound, val):
+        if val < lower_bound:
+            return replacement
+        else:
+            return val
+
+    def gte(replacement, upper_bound, val):
+        if val >= upper_bound:
+            return replacement
+        else:
+            return val
+
+    def lte(replacement, lower_bound, val):
+        if val <= lower_bound:
+            return replacement
+        else:
+            return val
+
+    def equals(replacement, equals_val, val):
+        if val == equals_val:
+            return replacement
+        else:
+            return val
 
 # Create a metric to track time spent and requests made.
 REQUEST_TIME = Summary('sunspec_fn_collect_data',
@@ -61,7 +99,7 @@ REQUEST_TIME = Summary('sunspec_fn_collect_data',
 
 # Decorate function with metric.
 @REQUEST_TIME.time()
-def collect_data(sunspec_client, model_ids):
+def collect_data(sunspec_client, model_ids, filters):
 
     if sunspec_client is None:
         print("no sunspec client defined, init() call, ignoring")
@@ -111,8 +149,17 @@ def collect_data(sunspec_client, model_ids):
                             else:
                                 value = str(point.value).rstrip('\0')
                             
-                            print(f"# {metric_label}{unit_label}: {value}")
-                            results[f"{metric_label}{unit_label}"] = { "value" : value, "metric_type": metric_type }
+                            final_label = f"{metric_label}{unit_label}"
+
+                            if len(filters) > 0:
+                                for x in filters:
+                                    if x.regex.match(metric_label):
+                                        old_value = value
+                                        value = x.fn(old_value)
+                                        print(f"# !! Filtered {metric_label}. {x.regex} matched. {old_value} -> {value}", flush=True)
+                                        
+                            print(f"# {final_label}: {value}")
+                            results[f"{final_label}"] = { "value" : value, "metric_type": metric_type }
 
     return results
 
@@ -120,16 +167,17 @@ def collect_data(sunspec_client, model_ids):
 class SunspecCollector(object):
     "The ip, port and target is of the modbus/sunspec device"
 
-    def __init__(self, sunspec_client, model_ids, ip, port, target):
+    def __init__(self, sunspec_client, model_ids, ip, port, target, filters):
         self.sunspec_client = sunspec_client
         self.model_ids = model_ids
         self.ip = ip
         self.port = port
         self.target = target
+        self.filters = filters
 
     def collect(self):
         # yield GaugeMetricFamily('my_gauge', 'Help text', value=7)
-        results = collect_data(self.sunspec_client, self.model_ids)
+        results = collect_data(self.sunspec_client, self.model_ids, self.filters)
         for x in results:  # call sunspec here
             the_value = results[x]["value"]
             if is_numeric(the_value):
@@ -257,8 +305,6 @@ def sunspec_test(ip, port, address):
                         print('%-40s %20s %-10s' % (label, value, str(units)))
 
 
-
-
 if __name__ == '__main__':
     # Start up the server to expose the metrics.
     arguments = docopt(__doc__, version='sunspec-prometheus-exporter 1.0')
@@ -288,6 +334,14 @@ if __name__ == '__main__':
         # remove the models that don't match what we want
         # this will make reads faster (ignore unnecessary model data sets)
 
+        filters = []
+        if arguments["--filter"] is not None:
+            for f in arguments["--filter"]:
+                (filter_metric_regex, func_n_params, replacement) = f.split(" ")
+                func_name, *parameters = func_n_params.split(":")
+                func = FnMapping.filter_fn(eval(f"FnMapping.{func_name}"), replacement, *parameters)
+                filters.append(Filter(regex=re.compile(filter_metric_regex),fn=func))
+
         print("# !!! Enumerating all models, removing from future reads unwanted ones")
         models = sunspec_client.device.models_list.copy()
         for model in models:
@@ -296,15 +350,15 @@ if __name__ == '__main__':
                 print(f"#    Removed [{name}]")
                 sunspec_client.device.models_list.remove(model)
             else:
-                print(f"#  Keeping [{name}]")
-
+                print(f"#  Will collect [{name}]")
 
         REGISTRY.register(SunspecCollector(
                 sunspec_client,
                 sunspec_model_ids,
                 sunspec_ip,
                 sunspec_port,
-                sunspec_address
+                sunspec_address,
+                filters
             )
         )
 

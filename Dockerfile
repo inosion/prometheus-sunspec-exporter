@@ -1,9 +1,11 @@
-FROM python:3.9
-
+FROM python:3.9-alpine
 
 ADD requirements.txt /
 RUN pip install -r /requirements.txt
 
+RUN apk update && apk upgrade && \
+    apk add --no-cache bash git openssh
+    
 WORKDIR /src/pysunspec
 RUN git clone --recursive https://github.com/sunspec/pysunspec .
 RUN python -m unittest discover -v sunspec
