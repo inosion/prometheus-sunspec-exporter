@@ -117,9 +117,9 @@ def collect_data(sunspec_client, model_ids, filters):
         
         for model in sunspec_client.device.models_list:
                 label = model_name(model)
-                print("# ---------------------")
-                print(f"# model: {label}")
-                print("# ---------------------")
+                print("# ---------------------", flush=True)
+                print(f"# model: {label}", flush=True)
+                print("# ---------------------", flush=True)
                 for block in model.blocks:
                     if block.index > 0:
                         index = '%02d_' % (block.index)
@@ -156,9 +156,12 @@ def collect_data(sunspec_client, model_ids, filters):
                                     if x.regex.match(metric_label):
                                         old_value = value
                                         value = x.fn(old_value)
-                                        print(f"# !! Filtered {metric_label}. {x.regex} matched. {old_value} -> {value}", flush=True)
-                                        
-                            print(f"# {final_label}: {value}")
+                                        if old_value != value:
+                                            print(f"# !! Filtered {metric_label}. {x.regex} matched. {old_value} -> {value}", flush=True)
+                                        else:
+                                            print(f"# !! Filter no match {metric_label}. {x.regex} matched. {old_value} -> {value}", flush=True)
+
+                            print(f"# {final_label}: {value}", flush=True)
                             results[f"{final_label}"] = { "value" : value, "metric_type": metric_type }
 
     return results
@@ -192,7 +195,7 @@ class SunspecCollector(object):
                 m.add_metric([self.ip, str(self.port),str(self.target)], the_value)
                 yield m
             else:
-                print(f"# metric from {self.ip}:{self.port}/{self.target} sunspec_{x} Value: {the_value} is a {type(the_value)}, Ignoring")
+                print(f"# metric from {self.ip}:{self.port}/{self.target} sunspec_{x} Value: {the_value} is a {type(the_value)}, Ignoring", flush=True)
 
 
 # https://stackoverflow.com/a/52676692/2150411
@@ -308,7 +311,7 @@ def sunspec_test(ip, port, address):
 if __name__ == '__main__':
     # Start up the server to expose the metrics.
     arguments = docopt(__doc__, version='sunspec-prometheus-exporter 1.0')
-    print(arguments)
+    print(arguments, flush=True)
 
     sunspec_ip =        arguments["--sunspec_ip"]
     sunspec_port =      int(arguments["--sunspec_port"])
@@ -340,17 +343,18 @@ if __name__ == '__main__':
                 (filter_metric_regex, func_n_params, replacement) = f.split(" ")
                 func_name, *parameters = func_n_params.split(":")
                 func = FnMapping.filter_fn(eval(f"FnMapping.{func_name}"), replacement, *parameters)
+                print(f"# Added filter: {func_name}({func_n_params}) [{replacement}] -> {filter_metric_regex}", flush=True)
                 filters.append(Filter(regex=re.compile(filter_metric_regex),fn=func))
 
-        print("# !!! Enumerating all models, removing from future reads unwanted ones")
+        print("# !!! Enumerating all models, removing from future reads unwanted ones", flush=True)
         models = sunspec_client.device.models_list.copy()
         for model in models:
             name = model_name(model)
             if str(model.id) not in sunspec_model_ids:
-                print(f"#    Removed [{name}]")
+                print(f"#    Removed [{name}]", flush=True)
                 sunspec_client.device.models_list.remove(model)
             else:
-                print(f"#  Will collect [{name}]")
+                print(f"#  Will collect [{name}]", flush=True)
 
         REGISTRY.register(SunspecCollector(
                 sunspec_client,
