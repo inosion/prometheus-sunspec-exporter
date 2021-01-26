@@ -11,9 +11,9 @@ RUN git clone --recursive https://github.com/sunspec/pysunspec .
 RUN python -m unittest discover -v sunspec
 RUN python setup.py install
 
-WORKDIR /sunspec_exporter
-ADD sunspec_exporter /sunspec_exporter
+WORKDIR /prometheus_sunspec_exporter
+ADD prometheus_sunspec_exporter /prometheus_sunspec_exporter
 
 EXPOSE 9807
 
-ENTRYPOINT [ "python3", "/sunspec_exporter/sunspec_exporter.py" ]
+ENTRYPOINT [ "python3", "/prometheus_sunspec_exporter/prometheus_sunspec_exporter.py" ]

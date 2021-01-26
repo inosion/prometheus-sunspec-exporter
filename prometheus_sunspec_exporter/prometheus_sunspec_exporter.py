@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
-
-"""sunspec-prometheus-exporter
+"""prometheus-sunspec-exporter
 
 Usage:
-  sunspec_exporter.py start [ --port PORT ] [ --sunspec_address SUNSPEC_ADDRESS ] [ --filter METRIC_FILTER... ] --sunspec_ip SUNSPEC_IP --sunspec_port SUNSPEC_PORT --sunspec_model_ids MODEL_IDS
-  sunspec_exporter.py query [ --sunspec_address SUNSPEC_ADDRESS ] --sunspec_ip SUNSPEC_IP --sunspec_port SUNSPEC_PORT 
+  prometheus-sunspec-exporter.py start [ --port PORT ] [ --sunspec_address SUNSPEC_ADDRESS ] [ --filter METRIC_FILTER... ] --sunspec_ip SUNSPEC_IP --sunspec_port SUNSPEC_PORT --sunspec_model_ids MODEL_IDS
+  prometheus-sunspec-exporter.py query [ --sunspec_address SUNSPEC_ADDRESS ] --sunspec_ip SUNSPEC_IP --sunspec_port SUNSPEC_PORT 
 
 Options:
   -h --help                          Show this screen.
@@ -51,47 +50,15 @@ except:
 import sunspec.core.pics as pics
 import sunspec.core.util as util
 from xml.dom import minidom
+
 import time
 import re
 import collections
 
-Filter = collections.namedtuple('Filter', ['regex', 'fn'])
-class FnMapping:
-
-    def filter_fn(fn, *args):
-        def filter(v):
-            return fn(*args, v)
-        return filter
-
-    def gt(replacement, upper_bound, val):
-        if val > upper_bound:
-            return replacement
-        else:
-            return val
-
-    def lt(replacement, lower_bound, val):
-        if val < lower_bound:
-            return replacement
-        else:
-            return val
-
-    def gte(replacement, upper_bound, val):
-        if val >= upper_bound:
-            return replacement
-        else:
-            return val
-
-    def lte(replacement, lower_bound, val):
-        if val <= lower_bound:
-            return replacement
-        else:
-            return val
-
-    def equals(replacement, equals_val, val):
-        if val == equals_val:
-            return replacement
-        else:
-            return val
+# Internal modules
+from util import is_numeric
+from util_sunspec import sunspec_test, model_name
+from filtering import FnMapping, Filter
 
 # Create a metric to track time spent and requests made.
 REQUEST_TIME = Summary('sunspec_fn_collect_data',
@@ -156,9 +123,10 @@ def collect_data(sunspec_client, model_ids, filters):
                                     if x.regex.match(metric_label):
                                         old_value = value
                                         value = x.fn(old_value)
-                                        print(f"# !! Filtered {metric_label}. {x.regex} matched. {old_value} -> {value}", flush=True)
+                                        if value != old_value:
+                                            print(f"# !! Filtered {metric_label}. {x.regex} matched. {old_value} -> {value}", flush=True)
                                         
-                            print(f"# {final_label}: {value}")
+                            print(f"# {final_label}: {value}", flush=True)
                             results[f"{final_label}"] = { "value" : value, "metric_type": metric_type }
 
     return results
@@ -193,117 +161,6 @@ class SunspecCollector(object):
                 yield m
             else:
                 print(f"# metric from {self.ip}:{self.port}/{self.target} sunspec_{x} Value: {the_value} is a {type(the_value)}, Ignoring")
-
-
-# https://stackoverflow.com/a/52676692/2150411
-import ast
-import numbers
-def is_numeric(obj):
-    try:
-        if isinstance(obj, numbers.Number):
-            return True
-        elif isinstance(obj, str):
-            nodes = list(ast.walk(ast.parse(obj)))[1:]
-            if not isinstance(nodes[0], ast.Expr):
-                return False
-            if not isinstance(nodes[-1], ast.Num):
-                return False
-            nodes = nodes[1:-1]
-            for i in range(len(nodes)):
-                #if used + or - in digit :
-                if i % 2 == 0:
-                    if not isinstance(nodes[i], ast.UnaryOp):
-                        return False
-                else:
-                    if not isinstance(nodes[i], (ast.USub, ast.UAdd)):
-                        return False
-            return True
-        else:
-            return False
-    except:
-        return False
-
-def model_name(model):
-    "Model Data Name"
-    if model.model_type.label:
-        label = '%s (%s)' % (model.model_type.label, str(model.id))
-    else:
-        label = '(%s)' % (str(model.id))
-    return label
-
-def sunspec_test(ip, port, address):
-
-    """
-    Original suns options:
-
-        -o: output mode for data (text, xml)
-        -x: export model description (slang, xml)
-        -t: transport type: tcp or rtu (default: tcp)
-        -a: modbus slave address (default: 1)
-        -i: ip address to use for modbus tcp (default: localhost)
-        -P: port number for modbus tcp (default: 502)
-        -p: serial port for modbus rtu (default: /dev/ttyUSB0)
-        -b: baud rate for modbus rtu (default: 9600)
-        -T: timeout, in seconds (can be fractional, such as 1.5; default: 2.0)
-        -r: number of retries attempted for each modbus read
-        -m: specify model file
-        -M: specify directory containing model files
-        -s: run as a test server
-        -I: logger id (for sunspec logger xml output)
-        -N: logger id namespace (for sunspec logger xml output, defaults to 'mac')
-        -l: limit number of registers requested in a single read (max is 125)
-        -c: check models for internal consistency then exit
-        -v: verbose level (up to -vvvv for most verbose)
-        -V: print current release number and exit
-    """
-
-
-    try:
-        sd = client.SunSpecClientDevice(client.TCP, address, ipaddr=ip, ipport=port, timeout=10.0)
-
-    except client.SunSpecClientError as e:
-        print('Error: %s' % (e))
-        sys.exit(1)
-
-    if sd is not None:
-
-        print( '\nTimestamp: %s' % (time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())))
-
-        # read all models in the device
-        sd.read()
-
-        root = ET.Element(pics.PICS_ROOT)
-        sd.device.to_pics(parent = root, single_repeating = True)
-        print(minidom.parseString(ET.tostring(root)).toprettyxml(indent="  "))
-
-        for model in sd.device.models_list:
-            if model.model_type.label:
-                label = '%s (%s)' % (model.model_type.label, str(model.id))
-            else:
-                label = '(%s)' % (str(model.id))
-            print('\nmodel: %s\n' % (label))
-            for block in model.blocks:
-                if block.index > 0:
-                  index = '%02d:' % (block.index)
-                else:
-                  index = '   '
-                for point in block.points_list:
-                    if point.value is not None:
-                        if point.point_type.label:
-                            label = '   %s%s (%s):' % (index, point.point_type.label, point.point_type.id)
-                        else:
-                            label = '   %s(%s):' % (index, point.point_type.id)
-                        units = point.point_type.units
-                        if units is None:
-                            units = ''
-                        if point.point_type.type == suns.SUNS_TYPE_BITFIELD16:
-                            value = '0x%04x' % (point.value)
-                        elif point.point_type.type == suns.SUNS_TYPE_BITFIELD32:
-                            value = '0x%08x' % (point.value)
-                        else:
-                            value = str(point.value).rstrip('\0')
-                        print('%-40s %20s %-10s' % (label, value, str(units)))
-
 
 if __name__ == '__main__':
     # Start up the server to expose the metrics.

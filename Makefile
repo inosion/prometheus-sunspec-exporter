@@ -6,3 +6,7 @@ build:
 
 release:
 	docker save inosion/prometheus-sunspec-exporter:$(VERSION) | gzip > inosion-prometheus-sunspec-exporter-$(VERSION).tgz
+
+
+test:
+	nosetests tests

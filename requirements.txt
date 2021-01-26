@@ -1,3 +1,5 @@
 prometheus-client
 pySerial
 docopt
+nose
+mock
