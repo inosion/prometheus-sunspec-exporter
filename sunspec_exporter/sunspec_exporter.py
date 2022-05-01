@@ -49,8 +49,8 @@ try:
 except:
     import elementtree.ElementTree as ET
 import sunspec.core.pics as pics
-import sunspec.core.util as util
 from xml.dom import minidom
+import sys
 import time
 import re
 import collections
